@@ -21,17 +21,23 @@ export interface CliRuntimeOptions {
 
 const RULES = [
   '# Frametell',
-  'You are making one film inside this project directory.',
-  'Do not modify engine/, engine_modules/, or .git/. Do not modify .studio/ except .studio/revision.json.',
-  'Do not run render.mjs, npm install, curl, or wget.',
-  'Change an existing page with a small edit. Never rewrite a whole page file.',
+  'You are reviewing one film inside this project directory. Look, then answer.',
+  'Do not edit a file, do not run a command, and do not use the web.',
   'If the task says to call verdict, flag, or finish, those tools are not installed here: reply with only the JSON object the task describes.',
 ].join('\n');
 
 const ARG_BUDGET = 80_000;
-const READ_ONLY = 'Read';
-/** tools a review must not have, even if a CLI's default set includes them */
-const NO_RUN = 'Bash,Write,Edit,NotebookEdit,WebFetch,WebSearch,Task,Agent';
+/** the one read tool each CLI actually has. Claude's is `Read`; Grok's is `read_file` (not `Read`, and not `Bash`). */
+const READ_TOOL: Record<CliKind, string> = { claude: 'Read', codex: '', grok: 'read_file' };
+/**
+ * Tools removed as well, in that CLI's own ids. Grok does not know Claude's names (`Bash`, `Write`): its shell is
+ * `run_terminal_cmd` and its edit is `search_replace`. An unknown name removes nothing.
+ */
+const DENY_TOOL: Record<CliKind, string> = {
+  claude: 'Bash,Write,Edit,NotebookEdit,WebFetch,WebSearch,Task,Agent',
+  codex: '',
+  grok: 'run_terminal_cmd,bash,run_terminal_command,search_replace,write,StrReplace,EditNotebook,Delete,web_search,web_fetch,task,Shell,Agent',
+};
 
 export interface CliAcc {
   sessionId?: string;
@@ -174,6 +180,8 @@ const SCHEMA: Record<string, string> = {
 
 export interface CliLaunch {
   kind: CliKind;
+  /** the executable. A Windows npm `.cmd` shim cannot take a multiline argument: the prompt goes by file or stdin. */
+  bin?: string;
   cwd: string;
   prompt: string;
   promptFile: string;
@@ -183,20 +191,26 @@ export interface CliLaunch {
   model?: string;
   sessionId?: string;
   resume: boolean;
-  /** research keeps the CLI's own web tools; none is a look-and-answer session */
+  /** kept for the caller. It does not widen the launch: a CLI only reviews. */
   tools: 'files' | 'none' | 'research';
   maxTurns: number;
   schema?: string;
   schemaFile?: string;
 }
 
+const viaCmd = (bin?: string) => !!bin && /\.(cmd|bat)$/i.test(bin);
+const FILE_PROMPT = (file: string) => 'The full task is in ' + file + '. Read that file and answer it. Do not edit it.';
+
 /** argv after the executable. Always a read-only review: no skip-permission flag, whatever `tools` says.
- *  A long Codex prompt is returned as stdin (a single dash). */
+ *  A long Codex prompt, or any prompt handed to a Windows `.cmd` shim, is returned as stdin (a single dash). */
 export function cliArgv(o: CliLaunch): { args: string[]; stdin?: string } {
   const model = o.model && o.model !== 'default' ? o.model : undefined;
-  const tools = o.images.length ? READ_ONLY : '';
+  const read = READ_TOOL[o.kind];
+  const deny = DENY_TOOL[o.kind];
+  const shim = viaCmd(o.bin);
   if (o.kind === 'codex') {
-    const long = o.prompt.length > ARG_BUDGET;
+    // cmd.exe would split a prompt on the first newline, and the command line is short of 32 KiB. Stdin carries it.
+    const long = shim || o.prompt.length > ARG_BUDGET;
     const args = ['exec'];
     if (o.resume && o.sessionId) args.push('resume', o.sessionId);
     args.push('--json', '--color', 'never', '--skip-git-repo-check', '--sandbox', 'read-only', '-C', o.cwd);
@@ -210,24 +224,23 @@ export function cliArgv(o: CliLaunch): { args: string[]; stdin?: string } {
     const args = [
       '--output-format', 'streaming-messages-json', '--include-partial-messages',
       '--permission-mode', 'plan', '--sandbox', 'read-only', '--disable-web-search',
-      '--disallowed-tools', NO_RUN, '--cwd', o.cwd,
+      '--tools', read, '--disallowed-tools', deny, '--cwd', o.cwd,
       '--max-turns', String(Math.max(1, o.maxTurns)), '--prompt-file', o.promptFile,
     ];
-    if (tools) args.push('--tools', tools);
     if (model) args.push('--model', model);
-    if (o.systemText.length <= ARG_BUDGET) args.push('--system-prompt-override', o.systemText);
+    // a `.cmd` shim cannot take a multiline argument, so the system text is already in the prompt file
+    if (!shim && o.systemText.length <= ARG_BUDGET) args.push('--system-prompt-override', o.systemText);
     if (o.resume && o.sessionId) args.push('--resume', o.sessionId);
     else if (o.sessionId) args.push('--session-id', o.sessionId);
     if (o.schema) args.push('--json-schema', o.schema);
     return { args };
   }
-  const prompt = o.prompt.length > ARG_BUDGET ? 'The full task is in ' + o.promptFile + '. Read that file and answer it. Do not edit it.' : o.prompt;
+  const prompt = shim || o.prompt.length > ARG_BUDGET ? FILE_PROMPT(o.promptFile) : o.prompt;
   const args = [
     '--print', '--output-format', 'stream-json', '--include-partial-messages',
     '--permission-mode', 'plan', '--system-prompt-file', o.systemFile,
-    '--disallowed-tools', NO_RUN,
+    '--tools', read, '--disallowed-tools', deny,
   ];
-  if (tools) args.push('--tools', tools);
   if (model) args.push('--model', model);
   if (o.resume && o.sessionId) args.push('--resume', o.sessionId);
   else if (o.sessionId) args.push('--session-id', o.sessionId);
@@ -311,12 +324,14 @@ export function cliRuntime(o: CliRuntimeOptions): AgentRuntime {
           const imageNote = images.length ? 'Images to look at:\n' + images.map((p) => '- ' + p).join('\n') : '';
           const prompt = [imageNote, input.text, note].filter(Boolean).join('\n\n');
           const promptFile = path.join(dir, 'turn.md');
-          fs.writeFileSync(promptFile, prompt);
+          // a Windows `.cmd` shim is started by cmd.exe, which cannot take a multiline --system-prompt-override
+          const shim = process.platform === 'win32' && /\.(cmd|bat)$/i.test(o.bin);
+          fs.writeFileSync(promptFile, shim && o.kind === 'grok' ? systemText + '\n\n' + prompt : prompt);
           const schema = s.tools === 'none' && names.length === 1 ? SCHEMA[names[0]] : undefined;
           const schemaFile = schema ? path.join(dir, 'schema.json') : undefined;
           if (schema && schemaFile) fs.writeFileSync(schemaFile, schema);
           const launch = cliArgv({
-            kind: o.kind, cwd: s.cwd, prompt, promptFile, systemFile, systemText, images, model: o.model,
+            kind: o.kind, bin: o.bin, cwd: s.cwd, prompt, promptFile, systemFile, systemText, images, model: o.model,
             sessionId, resume: continued && !!sessionId, tools: s.agentTools ? 'research' : (s.tools || 'files'),
             maxTurns: s.maxTurns, schema, schemaFile,
           });
