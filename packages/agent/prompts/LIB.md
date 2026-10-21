@@ -37,6 +37,7 @@ The general helpers `P.move(L, fn)` (drive a layer), `P.pathAt(d)` (points along
 
 ## Known engine pitfalls
 - `PV.ease` has no `in`; write an accelerating curve by hand as `u*u`.
+- `PV.spring` and `PV.springTo` pass the target by a few percent, then rest. Clamp the result before using it as an opacity. One arrival is still `PV.ease.out`. The camera stays on `P.push`, `P.pan` and `P.slam`.
 - `P.line` does not support dashed (only arrows do); the handle `P.line` returns can `.hide()`.
 - `code().hl` positions by character column; in JetBrains Mono a character is about 0.6× the font size. If a highlight is off, check it against a screenshot.
 - `P.follow` has no left-align option; set `el.style.textAlign` by hand when needed.
