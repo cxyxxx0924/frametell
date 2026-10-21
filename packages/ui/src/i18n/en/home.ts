@@ -44,6 +44,7 @@ const en: typeof zh = {
   skipped: 'Some files are in formats we can’t read yet and were skipped',
   hintInput: 'Say what you want to explain, or attach your material',
   hintModel: 'Pick a model first',
+  hintCli: 'A local CLI only reviews, so it cannot make the film. Pick an API model as well.',
   hintVoiceKey: 'Connect the voice service to start',
   titleA: 'Turn an idea into a ',
   titleB: 'beautiful',

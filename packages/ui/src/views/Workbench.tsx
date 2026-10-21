@@ -9,6 +9,7 @@ import { Stage } from './Stage';
 import { offerRef } from '../lib/refs';
 import { useT } from '../i18n';
 import { FilmCredits, orShort } from '../components/Credits';
+import { modelRefLabel } from '../components/ModelPicker';
 import { hosted } from '../lib/client';
 
 const fmtK = (n: number) => (n >= 1e6 ? (n / 1e6).toFixed(1) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'K' : String(n));
@@ -36,8 +37,9 @@ function CostChip({ run, project }: { run: RunView; project: ProjectView }) {
           <p className="text-[12px] text-ink-3">{t('workbench.costHeading')}</p>
           <p className="mt-0.5 font-mono text-[22px] text-ink tabular">{money(run.cost)}</p>
           <dl className="mt-3 space-y-1.5 border-t border-line pt-3 text-[12.5px]">
-            <div className="flex justify-between gap-3"><dt className="text-ink-3">{t(project.pageModel ? 'workbench.director' : 'workbench.model')}</dt><dd className="truncate text-ink-2">{project.model.split('/').pop()}</dd></div>
-            {project.pageModel && <div className="flex justify-between gap-3"><dt className="text-ink-3">{t('workbench.pages')}</dt><dd className="truncate text-ink-2">{project.pageModel.split('/').pop()}</dd></div>}
+            <div className="flex justify-between gap-3"><dt className="text-ink-3">{t(project.pageModel ? 'workbench.director' : 'workbench.model')}</dt><dd className="truncate text-ink-2">{modelRefLabel(project.model)}</dd></div>
+            {project.pageModel && <div className="flex justify-between gap-3"><dt className="text-ink-3">{t('workbench.pages')}</dt><dd className="truncate text-ink-2">{modelRefLabel(project.pageModel)}</dd></div>}
+            {project.reviewModel && project.reviewModel !== (project.pageModel || project.model) && <div className="flex justify-between gap-3"><dt className="text-ink-3">{t('workbench.review')}</dt><dd className="truncate text-ink-2">{modelRefLabel(project.reviewModel)}</dd></div>}
             {u && <div className="flex justify-between gap-3"><dt className="text-ink-3">{t('workbench.input')}</dt><dd className="font-mono text-ink-2 tabular">{fmtK(seen)} token</dd></div>}
             {u && <div className="flex justify-between gap-3"><dt className="text-ink-3">{t('workbench.output')}</dt><dd className="font-mono text-ink-2 tabular">{fmtK(u.output)} token</dd></div>}
             {u && seen > 0 && <div className="flex justify-between gap-3"><dt className="text-ink-3">{t('workbench.cacheHit')}</dt><dd className="font-mono text-ink-2 tabular">{Math.round((100 * u.cacheRead) / seen)}%</dd></div>}

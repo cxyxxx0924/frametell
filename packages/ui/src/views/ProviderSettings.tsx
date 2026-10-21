@@ -29,7 +29,8 @@ const blurb = (p: ProviderView) => (p.group === 'custom' ? p.baseUrl : t(`provid
 export const connected = (s: PublicSettings, p: Pick<ProviderView, 'id' | 'cli' | 'bin'>) => p.cli ? !!p.bin : !!s.keys[p.id];
 
 export function ProviderList({ providers, s, open, onOpen, onAddCustom }: { providers: ProviderView[]; s: PublicSettings; open?: string; onOpen: (id: string) => void; onAddCustom: () => void }) {
-  const inUse = s.defaults.model?.split('/')[0];
+  const filmOf = s.defaults.model?.split('/')[0];
+  const reviewOf = s.defaults.reviewModel?.split('/')[0];
   const groups = (['cli', 'recommended', 'global', 'china', 'local', 'custom'] as const).map((g) => ({ g, items: providers.filter((p) => p.group === g) }));
   return (
     <nav aria-label={t('providers.list')} className="space-y-4">
@@ -45,7 +46,7 @@ export function ProviderList({ providers, s, open, onOpen, onAddCustom }: { prov
                     className={`flex w-full items-center gap-2.5 rounded-lg px-2.5 py-[7px] text-left text-[13px] transition-colors duration-150 ${on ? 'bg-ink/[0.07] text-ink' : 'text-ink-2 hover:bg-ink/[0.04] hover:text-ink'}`}>
                     <ProviderLogo id={p.id} name={p.name} size={18} />
                     <span className="min-w-0 flex-1 truncate">{providerName(p)}</span>
-                    {inUse === p.id && <span className="shrink-0 text-[11px] text-accent-ink">{t('providers.inUse')}</span>}
+                    {(filmOf === p.id || reviewOf === p.id) && <span className="shrink-0 text-[11px] text-accent-ink">{t('providers.inUse')}</span>}
                     {connected(s, p) && <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-jade" aria-label={t('providers.connected')} />}
                   </button>
                 </li>
@@ -214,8 +215,21 @@ export function ProviderDetail({ p, s, models, loading, patch, onClose, onRemove
             <ul className="divide-y divide-line overflow-hidden rounded-xl border border-line">
               {visible.map((m) => {
                 const key = `${m.provider}/${m.id}`;
-                const isDef = p.cli ? s.defaults.reviewModel === key : def === key;
-                const mark = () => void patch({ defaults: p.cli ? { reviewModel: isDef ? '' : key } : { model: key } });
+                // a local CLI chosen as the film's model is stored on `model` (its id is often `default`); the review
+                // choice is `reviewModel`. Either one is the selection the row has to show.
+                const asReview = s.defaults.reviewModel === key;
+                const asModel = def === key;
+                const isDef = p.cli ? asReview || asModel : asModel;
+                const mark = () => {
+                  if (!p.cli) { void patch({ defaults: { model: key } }); return; }
+                  if (!isDef) { void patch({ defaults: { reviewModel: key } }); return; }
+                  const defaults: { reviewModel?: string; model?: string } = {};
+                  if (asReview) defaults.reviewModel = '';
+                  if (asModel) defaults.model = '';
+                  void patch({ defaults });
+                };
+                const onText = t(p.cli && !asModel ? 'providers.isReview' : 'providers.isDefault');
+                const offText = t(p.cli ? 'providers.makeReview' : 'providers.makeDefault');
                 return (
                   <li key={m.id} className="group flex items-center gap-3 px-3.5 py-2.5">
                     <span className="min-w-0 flex-1">
@@ -225,12 +239,12 @@ export function ProviderDetail({ p, s, models, loading, patch, onClose, onRemove
                         {m.added && <span className="shrink-0 text-[11px] text-ink-3">{t('providers.addedByYou')}</span>}
                         {!m.vision && <span className="shrink-0 text-[11px] text-ink-3">{t('picker.noVision')}</span>}
                       </span>
-                      {m.name !== m.id && <span className="block truncate font-mono text-[11px] text-ink-3">{m.id}</span>}
+                      {m.name !== m.id && !(m.cli && m.id === 'default') && <span className="block truncate font-mono text-[11px] text-ink-3">{m.id}</span>}
                     </span>
                     {m.added && <button type="button" className="fs-icon-btn h-7 w-7 opacity-0 transition-opacity focus-visible:opacity-100 group-hover:opacity-100" onClick={() => void patch({ models: { [p.id]: added.filter((x) => x !== m.id) } })} aria-label={t('providers.removeModel', { id: m.id })}><Trash2 size={13} /></button>}
-                    <button type="button" onClick={mark} aria-pressed={isDef} title={isDef ? t(p.cli ? 'providers.isReview' : 'providers.isDefault') : t(p.cli ? 'providers.makeReview' : 'providers.makeDefault')}
+                    <button type="button" onClick={mark} aria-pressed={isDef} title={isDef ? onText : offText}
                       className={`inline-flex h-7 shrink-0 items-center gap-1 rounded-md px-2 text-[11.5px] transition-colors ${isDef ? 'text-accent-ink' : 'text-ink-3 opacity-0 hover:bg-ink/[0.06] hover:text-ink focus-visible:opacity-100 group-hover:opacity-100'}`}>
-                      <Star size={12} className={isDef ? 'fill-current' : ''} aria-hidden />{isDef ? t(p.cli ? 'providers.isReview' : 'providers.isDefault') : t(p.cli ? 'providers.makeReview' : 'providers.makeDefault')}
+                      <Star size={12} className={isDef ? 'fill-current' : ''} aria-hidden />{isDef ? onText : offText}
                     </button>
                   </li>
                 );

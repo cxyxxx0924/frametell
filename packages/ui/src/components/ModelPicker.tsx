@@ -12,6 +12,18 @@ export const modelKey = (m: Pick<ModelInfo, 'provider' | 'id'>) => `${m.provider
 /** a provider by the name Studio gives it (「Claude」, not Pi's 「Anthropic」); the user's own endpoints keep theirs */
 const nameOf = (m: Pick<ModelInfo, 'provider' | 'providerName'>) => { const k = `providers.name.${m.provider}`; const n = t(k as MessageKey); return n === k ? m.providerName : n; };
 
+/** the name to show for a "provider/id" ref. A local CLI's own model is id `default`, which is not a name. */
+export function modelRefLabel(ref: string | undefined, models: Pick<ModelInfo, 'provider' | 'id' | 'name'>[] = []): string {
+  if (!ref) return '';
+  const hit = models.find((m) => modelKey(m) === ref);
+  if (hit) return hit.name;
+  const slash = ref.indexOf('/');
+  const provider = slash < 0 ? ref : ref.slice(0, slash);
+  const id = slash < 0 ? '' : ref.slice(slash + 1);
+  if (!id || id === 'default') { const k = `providers.name.${provider}` as MessageKey; const n = t(k); if (n !== k) return n; }
+  return id || provider;
+}
+
 export function ModelPicker({ id = 'model', models, value, onChange, onAdd, onManage, disabled }: {
   id?: string;
   models: ModelInfo[];
@@ -30,6 +42,9 @@ export function ModelPicker({ id = 'model', models, value, onChange, onAdd, onMa
   const search = useRef<HTMLInputElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const picked = models.find((m) => modelKey(m) === value);
+  const title = picked ? picked.name : value ? modelRefLabel(value, models) : t('picker.none');
+  const side = picked ? nameOf(picked) : undefined;
+  const markId = picked?.provider || (value?.includes('/') ? value.split('/')[0] : undefined);
 
   // the connected providers in the order models come, each with its models matching the search
   const groups = useMemo(() => {
@@ -81,9 +96,9 @@ export function ModelPicker({ id = 'model', models, value, onChange, onAdd, onMa
     <div ref={root} className="relative">
       <button id={id} type="button" disabled={disabled} onClick={() => setOpen(!open)} aria-haspopup="listbox" aria-expanded={open}
         className="flex h-11 w-full items-center gap-2.5 rounded-[10px] border border-line bg-surface pl-3 pr-2.5 text-left transition-[border-color,box-shadow] duration-150 hover:border-line-2 focus-visible:border-accent focus-visible:outline-none focus-visible:ring-4 focus-visible:ring-accent/15 disabled:opacity-50">
-        {picked ? <ProviderLogo id={picked.provider} name={nameOf(picked)} size={18} /> : <span className="h-[18px] w-[18px] rounded-full border border-dashed border-line-2" aria-hidden />}
-        <span className="min-w-0 flex-1 truncate text-[13.5px] text-ink">{picked ? picked.name : value ? value.split('/').slice(1).join('/') : t('picker.none')}</span>
-        {picked && <span className="hidden shrink-0 text-[12px] text-ink-3 sm:inline">{nameOf(picked)}</span>}
+        {markId ? <ProviderLogo id={markId} name={title} size={18} /> : <span className="h-[18px] w-[18px] rounded-full border border-dashed border-line-2" aria-hidden />}
+        <span className="min-w-0 flex-1 truncate text-[13.5px] text-ink">{title}</span>
+        {side && side !== title && <span className="hidden shrink-0 text-[12px] text-ink-3 sm:inline">{side}</span>}
         <ChevronDown size={15} className={`shrink-0 text-ink-3 transition-transform duration-200 ${open ? 'rotate-180' : ''}`} aria-hidden />
       </button>
 
@@ -135,7 +150,7 @@ export function ModelPicker({ id = 'model', models, value, onChange, onAdd, onMa
                         {m.recommended && <span className="shrink-0 rounded-[5px] bg-accent-soft px-1.5 text-[10.5px] leading-[17px] text-accent-ink">{t('picker.recommended')}</span>}
                         {!m.vision && <span className="shrink-0 text-[11px] text-ink-3">{t('picker.noVision')}</span>}
                       </span>
-                      {m.name !== m.id && <span className="block truncate font-mono text-[11px] text-ink-3">{m.id}</span>}
+                      {m.name !== m.id && !(m.cli && m.id === 'default') && <span className="block truncate font-mono text-[11px] text-ink-3">{m.id}</span>}
                     </span>
                     {on && <Check size={14} className="shrink-0 text-accent-ink" aria-hidden />}
                   </div>

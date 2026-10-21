@@ -62,14 +62,23 @@ export function Home({ openSettings, prefsStamp }: { openSettings: (section?: st
   const [drag, setDrag] = useState(false);
   const input = useRef<HTMLInputElement>(null);
 
-  // a local CLI only reviews, so it is not offered as the film's model or the pages'
-  const writing = (models.data?.models || []).filter((m) => !m.cli);
-  const noModel = models.data && !writing.length;
+  // a local CLI only reviews, so it is not offered as the film's model or the pages'. One already chosen is still shown:
+  // its id is often `default`, and dropping it made the field look empty.
+  const all = models.data?.models || [];
+  const writing = all.filter((m) => !m.cli);
+  const noApi = !!models.data && !writing.length;
   const savedModel = settings.data?.defaults.model;
+  const isCliKey = (key?: string) => !!key && all.some((m) => m.cli && `${m.provider}/${m.id}` === key);
   const savedWriting = savedModel && writing.some((m) => `${m.provider}/${m.id}` === savedModel) ? savedModel : undefined;
+  const savedCli = isCliKey(savedModel) ? savedModel : undefined;
   const fallback = models.data?.default && !models.data.default.cli ? `${models.data.default.provider}/${models.data.default.id}` : undefined;
-  const modelId = model ?? savedWriting ?? fallback;
-  // the pages' model: only ones that can see (the page agents check their own frames); unset, the director's
+  const pendingCli = !models.data && !!savedModel && /^(claude-cli|codex-cli|grok-cli)\//.test(savedModel) ? savedModel : undefined;
+  const modelId = model ?? savedWriting ?? savedCli ?? pendingCli ?? fallback;
+  const cliChosen = isCliKey(modelId) || (!!modelId && !models.data && /^(claude-cli|codex-cli|grok-cli)\//.test(modelId));
+  const pickerModels = cliChosen ? [...writing, ...all.filter((m) => m.cli && `${m.provider}/${m.id}` === modelId)] : writing;
+  // the pages' model: only ones that can see (the page agents check their own frames); unset, the director's.
+  // the choice already shown stays in the menu. A local CLI is not offered as a page model, but dropping it left
+  // this list empty ("还没有连接服务商") while the closed field still named it.
   const seeing = writing.filter((m) => m.vision);
   const savedPages = settings.data?.defaults.pageModel;
   const savedOwn = !!savedPages && savedPages !== modelId && seeing.some((m) => `${m.provider}/${m.id}` === savedPages);
@@ -78,6 +87,10 @@ export function Home({ openSettings, prefsStamp }: { openSettings: (section?: st
   const split = advanced ?? savedOwn;
   const pagesId = split ? (pageModel === null ? undefined : pageModel ?? (savedOwn ? savedPages : undefined)) || undefined : undefined;
   const pagesOwn = !!pagesId && pagesId !== modelId;
+  const pageShown = pagesId ?? modelId;
+  const pageModels = pageShown && !seeing.some((m) => `${m.provider}/${m.id}` === pageShown)
+    ? [...all.filter((m) => `${m.provider}/${m.id}` === pageShown), ...seeing]
+    : seeing;
   const styleId = style ?? settings.data?.defaults.style ?? 'warm-story';
   const filmLang = lang ?? locale;
   // only voices that speak the film's language: Volcengine's are Chinese voices (lang 'zh'), so an English film (the
@@ -97,7 +110,7 @@ export function Home({ openSettings, prefsStamp }: { openSettings: (section?: st
   const lockedStyle = (id: string) => !!credits?.styles && !credits.styles.includes(id);
   const canSearch = !!settings.data?.search?.provider;
   const webOn = web ?? !files.length;
-  const ready = hasInput && !!modelId && !voiceNoKey && !busy && !lockedStyle(styleId);
+  const ready = hasInput && !!modelId && !cliChosen && !voiceNoKey && !busy && !lockedStyle(styleId);
   const add = (list: FileList | null) => {
     if (!list) return;
     const ok = [...list].filter((f) => READABLE.test(f.name));
@@ -126,7 +139,7 @@ export function Home({ openSettings, prefsStamp }: { openSettings: (section?: st
     if (!cur.includes(id)) await client.updateSettings({ models: { [provider]: [...cur, id] } });
     settings.reload(); models.reload();
   };
-  const hint = noModel ? null : !hasInput ? t('home.hintInput') : !modelId ? t('home.hintModel') : voiceNoKey ? t('home.hintVoiceKey') : null;
+  const hint = !hasInput ? t('home.hintInput') : !modelId ? (noApi ? null : t('home.hintModel')) : cliChosen ? t('home.hintCli') : voiceNoKey ? t('home.hintVoiceKey') : null;
 
   return (
     <main className="mx-auto w-full max-w-[880px] px-6 pb-24 pt-14 sm:pt-20">
@@ -226,7 +239,7 @@ export function Home({ openSettings, prefsStamp }: { openSettings: (section?: st
               <div className="grid gap-x-4 gap-y-3 sm:grid-cols-2">
                 <div>
                   <p className="mb-1.5 flex items-baseline justify-between gap-2 text-[12px]"><span className="font-medium text-ink-2">{t('home.director')}</span><span className="truncate text-ink-3">{t('home.directorDoes')}</span></p>
-                  <ModelPicker models={writing} value={modelId} onChange={setModel} onAdd={addModel} onManage={openSettings} disabled={!models.data} />
+                  <ModelPicker models={pickerModels} value={modelId} onChange={setModel} onAdd={addModel} onManage={openSettings} disabled={!models.data} />
                 </div>
                 <div>
                   <p className="mb-1.5 flex items-baseline justify-between gap-2 text-[12px]">
@@ -235,12 +248,12 @@ export function Home({ openSettings, prefsStamp }: { openSettings: (section?: st
                       ? <button type="button" onClick={() => setPageModel(null)} className="truncate text-accent-ink hover:underline">{t('home.pagesSame')}</button>
                       : <span className="truncate text-ink-3">{t('home.pagesDoes')}</span>}
                   </p>
-                  <ModelPicker id="page-model" models={seeing} value={pagesId ?? modelId} onChange={(k) => setPageModel(k === modelId ? null : k)} onManage={openSettings} disabled={!models.data} />
+                  <ModelPicker id="page-model" models={pageModels} value={pageShown} onChange={(k) => setPageModel(k === modelId ? null : k)} onManage={openSettings} disabled={!models.data} />
                 </div>
               </div>
             ) : (
               <div className="sm:max-w-[calc(50%-8px)]">
-                <ModelPicker models={writing} value={modelId} onChange={setModel} onAdd={addModel} onManage={openSettings} disabled={!models.data} />
+                <ModelPicker models={pickerModels} value={modelId} onChange={setModel} onAdd={addModel} onManage={openSettings} disabled={!models.data} />
               </div>
             )}
             <button type="button" aria-expanded={split} onClick={() => { setAdvanced(!split); if (split) setPageModel(null); }}
@@ -254,7 +267,7 @@ export function Home({ openSettings, prefsStamp }: { openSettings: (section?: st
         </div>
 
         <div className="flex flex-wrap items-center justify-between gap-3 rounded-b-2xl border-t border-line bg-paper-2/50 px-5 py-3.5">
-          {noModel ? (
+          {noApi && !modelId ? (
             <p className="text-[12.5px] text-ink-2">{t('home.noModelA')}<button className="text-accent-ink underline-offset-2 hover:underline" onClick={() => openSettings()}>{t('home.noModelLink')}</button>{t('home.noModelB')}</p>
           ) : error ? (
             <p className="text-[12.5px] text-seal" role="alert">{error}</p>

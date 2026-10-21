@@ -8,6 +8,7 @@ const en: typeof zh = {
   model: 'Model',
   director: 'Director',
   pages: 'Pages',
+  review: 'Review',
   input: 'Read',
   output: 'Written',
   cacheHit: 'Cache hits',

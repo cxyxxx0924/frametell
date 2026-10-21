@@ -7,6 +7,7 @@ export default {
   model: '模型',
   director: '导演模型',
   pages: '画页模型',
+  review: '审阅模型',
   input: '读入',
   output: '写出',
   cacheHit: '缓存命中',

@@ -43,6 +43,7 @@ export default {
   skipped: '有些文件格式还不支持，已跳过',
   hintInput: '说一句想讲什么，或者附上资料',
   hintModel: '先选一个模型',
+  hintCli: '本机命令行只做审阅，不能画整部片子。再选一个 API 模型。',
   hintVoiceKey: '连接配音服务后才能开始',
   titleA: '把一个想法，讲成一条',
   titleB: '好看的',
