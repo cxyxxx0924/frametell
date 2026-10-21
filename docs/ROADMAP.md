@@ -21,7 +21,7 @@ We go one step at a time, and each step can be verified on its own. Finished ite
 - [x] Warm narrative illustration: grammar card → illustration component library → reference project (compound interest, 61 seconds)
 - [x] Whiteboard, chalkboard, tech dark: grammar card + reference project
 - [ ] Quiet study (the default style): still missing a grammar card and a reference project
-- [ ] Eval set and lessons library: numbers to compare before and after prompt changes; record the pitfalls the agent has hit
+- [ ] Eval set and lessons library: six briefs are in `docs/quality/eval/`, and the lessons are in `docs/quality/lessons.md`. Still missing a scored run that compares numbers before and after a prompt change
 - [ ] When a page is still broken after two rounds of fixes, fall back to a stronger model
 
 ## M2 · Agent and models (packages/agent, packages/models, packages/voice)

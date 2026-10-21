@@ -1,6 +1,6 @@
 /* Time-driven building blocks: rough shapes re-drawn per frame (liveRough), text that follows lt (follow), bars, slider, KaTeX formula
- * (tex, needs META.libs katex), canvas, a layer mover (move), points along a path (pathAt), and PV.K / PV.keys / PV.mix / PV.arcAt /
- * PV.mmss / PV.softmax. */
+ * (tex, needs META.libs katex), canvas, a layer mover (move), points along a path (pathAt), and PV.K / PV.keys / PV.spring /
+ * PV.springTo / PV.mix / PV.arcAt / PV.mmss / PV.softmax. */
 (function () {
   const { s, h, col, gen, rrect, clamp, ease, Builder } = PV;
   const B = Builder.prototype;
@@ -17,6 +17,30 @@
     const ex = z.map((v) => (v === -Infinity ? 0 : Math.exp(v / T - m)));
     const sum = ex.reduce((a, b) => a + b, 0);
     return ex.map((v) => v / sum);
+  };
+  // Underdamped step, zeta 0.72: about a 5% overshoot, then rest. omega0 is set so the
+  // envelope has fallen to ~2% by `dur` (zeta * omega0 * dur = 4). Pure in u: no stored velocity.
+  const SPRING_Z = 0.72;
+  const springStep = (u, dur) => {
+    if (!(dur > 0)) return u > 0 ? 1 : 0;
+    if (u <= 0) return 0;
+    const w0 = 4 / (SPRING_Z * dur);
+    const wd = w0 * Math.sqrt(1 - SPRING_Z * SPRING_Z);
+    const decay = Math.exp(-SPRING_Z * w0 * u);
+    return 1 - decay * (Math.cos(wd * u) + (SPRING_Z * w0 / wd) * Math.sin(wd * u));
+  };
+  /** 0 at `at`, a few percent past 1, then resting by about `at + dur`. A pure function of lt. */
+  PV.spring = (lt, at = 0, dur = 0.7) => springStep(lt - at, dur);
+  /**
+   * A value that changes target more than once. keys are [[t, v], …] in time order: the first
+   * value is where it already rests, and each later change adds one spring. The sum is still a
+   * pure function of lt, including while an earlier spring has not settled.
+   */
+  PV.springTo = (lt, keys, dur = 0.7) => {
+    if (!keys || !keys.length) return 0;
+    let v = keys[0][1];
+    for (let i = 1; i < keys.length; i++) v += (keys[i][1] - keys[i - 1][1]) * springStep(lt - keys[i][0], dur);
+    return v;
   };
   /** Piecewise keyframes → value at lt, eased per segment: PV.keys([[t, v], …], lt, easing). Holds the first / last value outside. */
   PV.keys = (keys, lt, e = ease.inOut) => {

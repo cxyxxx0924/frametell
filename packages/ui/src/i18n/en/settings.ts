@@ -50,7 +50,7 @@ const en: typeof zh = {
     group: { voice: 'Narration', look: 'Visuals', shape: 'Structure', audience: 'Audience' },
     starter: {
       voice: { a: 'Narrate like talking to a friend, light on jargon', b: 'Short sentences, one point each' },
-      look: { a: 'One idea per page, as little text on screen as possible', b: 'A restrained palette; one colour for what matters' },
+      look: { a: 'One idea per page, as little text on screen as possible', b: 'A restrained palette; one colour for what matters', c: 'Keep one main thing on screen and let it change, instead of a new card for each point' },
       shape: { a: 'Open with a question in the first five seconds', b: 'End on one line people can take away' },
       audience: { a: 'For complete beginners: why before how', b: 'Numbers and examples from everyday life' },
     },

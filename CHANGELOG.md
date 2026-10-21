@@ -7,6 +7,14 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Added
+
+- A seek-safe spring in the page runtime. `PV.spring(lt, at, dur)` settles from 0 to rest with a few percent of overshoot, and `PV.springTo(lt, [[t, v], …], dur)` adds one closed-form spring per target change, so a value that rises and then falls is still a pure function of time. One arrival stays on `PV.ease.out`. The camera stays on the pulse presets. The page agent and the storyboard are told to keep one object through several states, and to bring the next label in only after the object has started to change.
+
+- The home screen offers six starter topics (a fee, loss aversion, a short history of AI, a photon in the Sun, the bat-and-ball puzzle, a token bucket). Picking one fills the idea, the length and a fitting style. The notes behind them, with the only numbers a film of that topic may show, are the evaluation set in `docs/quality/eval/`. What those public code-rendered films are worth keeping, and what is not imported from them, is in `docs/quality/lessons.md`.
+
+- Preferences can start from one more visual line: keep one main thing on screen and let it change, instead of a new card for each point.
+
 ## [0.7.3] - 2026-10-19
 
 ### Added

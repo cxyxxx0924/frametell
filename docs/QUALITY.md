@@ -88,10 +88,10 @@ Only a single metric that cleanly separates the "approved" and "rejected" groups
 
 ## 4. Evaluation and feeding lessons back
 
-- **Evaluation set**: 6 pieces of material (investing, psychology, history, science, books, technology) × 2 styles. After changing prompts, the engine or a style pack, run it first with a cheap model, then spot-check with Opus.
+- **Evaluation set**: 6 pieces of material (investing, psychology, history, science, books, technology) × 2 styles. The notes are in [`docs/quality/eval/`](quality/eval/README.md). After changing prompts, the engine or a style pack, run it first with a cheap model, then spot-check with Opus. A scored before/after comparison is not built yet.
 - **Scoring**: gate results + a visual review (a fixed scoring sheet) + periodic blind picks by the author.
 - **Calibration set**: films the author has judged (approved / rejected), used to set gate thresholds; recalibrate whenever new judgements come in.
-- **Lessons** `docs/quality/lessons.md`: each entry is written as "practice + evidence + why + when to use it", not just a conclusion.
+- **Lessons** [`docs/quality/lessons.md`](quality/lessons.md): each entry is written as "practice + evidence + why + when to use it", not just a conclusion. The motion entries are the seek rule, the summed spring and the single object carried over from public code-rendered films, without their prompts.
 - **The checking tools are checked too**: every check is made to fail on purpose once, to confirm it really goes red.
 - **Transfer tests**: send an agent that has read only the docs to do a topic the docs don't cover, and have it report "what helped and where it got stuck".
 

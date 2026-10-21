@@ -93,7 +93,8 @@ export function PreferenceSettings({ s, patch }: { s: PublicSettings; patch: (p:
               <div key={g} role="group" aria-labelledby={`prefs-g-${g}`}>
                 <p id={`prefs-g-${g}`} className="mb-2 text-[12px] font-medium text-ink-2">{t(`settings.prefs.group.${g}` as MessageKey)}</p>
                 <div className="flex flex-col items-start gap-1.5">
-                  {(['a', 'b'] as const).map((k) => {
+                  {(['a', 'b', 'c'] as const).map((k) => {
+                    if (k === 'c' && g !== 'look') return null;
                     const starter = t(`settings.prefs.starter.${g}.${k}` as MessageKey);
                     const on = has(starter);
                     return (

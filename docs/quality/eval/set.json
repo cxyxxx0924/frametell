@@ -1,0 +1,11 @@
+{
+  "note": "Six source notes for the evaluation set in QUALITY.md. Each file is original Frametell material. A ref, when present, is a public post that suggested the subject. The post's prompt is not included.",
+  "items": [
+    { "id": "fee", "domain": "investing", "styles": ["warm-story", "whiteboard"], "durationSec": 60, "file": "fee.md" },
+    { "id": "loss", "domain": "psychology", "styles": ["warm-story", "study"], "durationSec": 60, "file": "loss.md" },
+    { "id": "ai", "domain": "history", "styles": ["chalkboard", "warm-story"], "durationSec": 60, "file": "ai.md", "ref": "https://x.com/kloss_xyz/status/2103652674336067876" },
+    { "id": "photon", "domain": "science", "styles": ["chalkboard", "warm-story"], "durationSec": 60, "file": "photon.md", "ref": "https://x.com/AstroTheWizard/status/2103629247751618782" },
+    { "id": "ball", "domain": "books", "styles": ["whiteboard", "study"], "durationSec": 60, "file": "ball.md" },
+    { "id": "bucket", "domain": "technology", "styles": ["tech-dark", "whiteboard"], "durationSec": 60, "file": "bucket.md", "ref": "https://x.com/ParkerRex/status/2103206747846701462" }
+  ]
+}

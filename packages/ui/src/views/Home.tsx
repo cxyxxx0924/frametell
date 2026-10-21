@@ -11,6 +11,15 @@ import { StylePicker } from '../components/StylePicker';
 import { VoicePicker } from '../components/VoicePicker';
 
 const DURATIONS = [60, 120, 300, 600];
+// One-sentence topics a knowledge film can start from. The longer notes, with the numbers a film may show, are in docs/quality/eval.
+const IDEAS = [
+  { id: 'fee', style: 'warm-story', duration: 60 },
+  { id: 'loss', style: 'warm-story', duration: 60 },
+  { id: 'ai', style: 'chalkboard', duration: 60 },
+  { id: 'photon', style: 'chalkboard', duration: 60 },
+  { id: 'ball', style: 'whiteboard', duration: 60 },
+  { id: 'bucket', style: 'tech-dark', duration: 60 },
+] as const;
 const ACCEPT = '.md,.markdown,.txt,.pdf,.docx,.pptx,.epub,.png,.jpg,.jpeg,.webp';
 const READABLE = /\.(md|markdown|txt|pdf|docx|pptx|epub|png|jpe?g|webp)$/i;
 
@@ -121,7 +130,23 @@ export function Home({ openSettings, prefsStamp }: { openSettings: (section?: st
       </h1>
       <p className="mt-3 max-w-[60ch] text-[14.5px] leading-relaxed text-ink-2">{t('home.intro')}</p>
 
-      <section aria-label={t('home.newVideo')} className="fs-card mt-9"
+      <div className="mt-6" role="group" aria-label={t('home.ideas')}>
+        <p className="fs-label">{t('home.ideas')}</p>
+        <div className="flex flex-wrap gap-1.5">
+          {IDEAS.map((idea) => {
+            const text = t(`home.idea.${idea.id}.topic`);
+            const on = topic === text;
+            return (
+              <button key={idea.id} type="button" className="fs-chip" aria-pressed={on} title={text}
+                onClick={() => { setTopic(text); setDuration(idea.duration); setStyle(idea.style); }}>
+                {t(`home.idea.${idea.id}.label`)}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      <section aria-label={t('home.newVideo')} className="fs-card mt-6"
         onDragOver={(e) => { e.preventDefault(); setDrag(true); }} onDragLeave={(e) => { if (!e.currentTarget.contains(e.relatedTarget as Node)) setDrag(false); }}
         onDrop={(e) => { e.preventDefault(); setDrag(false); add(e.dataTransfer.files); }}>
         <div className={`relative rounded-t-2xl border-b border-line px-5 pb-4 pt-5 transition-colors duration-150 ${drag ? 'bg-accent-soft/60' : ''}`}>
